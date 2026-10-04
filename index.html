@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stopwatch & Timer</title>
+<link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@300;500;700&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e8f4f8;--card:#fff;--ink:#0b3d5c;--mute:#5d7f93;--line:#cfe3ec;--accent:#0b7fa8;--hot:#ff5a3c;--track:#d8eaf1;--ok:#14a37f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#071a28;--card:#0d2a3f;--ink:#e6f6fb;--mute:#8fb3c4;--line:#1b4560;--accent:#5fd0e0;--hot:#ff7a5c;--track:#16384f;--ok:#3ddbb0}}
+:root[data-theme="dark"]{--bg:#071a28;--card:#0d2a3f;--ink:#e6f6fb;--mute:#8fb3c4;--line:#1b4560;--accent:#5fd0e0;--hot:#ff7a5c;--track:#16384f;--ok:#3ddbb0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:Figtree,system-ui,sans-serif;display:flex;justify-content:center;padding:20px 14px}
+main{width:100%;max-width:440px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+h1{font-size:1.15rem;margin:0;font-weight:700}
+.icon{background:var(--card);border:1px solid var(--line);color:var(--ink);width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.1rem}
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--track);border-radius:14px;padding:4px;margin-bottom:16px;position:relative}
+.tabs button{border:0;background:none;color:var(--mute);font:600 .95rem Figtree,sans-serif;padding:10px;border-radius:10px;cursor:pointer;position:relative;z-index:1;transition:color .2s}
+.tabs button[aria-selected="true"]{color:var(--ink)}
+.pill{position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);background:var(--card);border-radius:10px;transition:transform .25s cubic-bezier(.4,0,.2,1);box-shadow:0 1px 4px rgba(11,61,92,.15)}
+.tabs[data-i="1"] .pill{transform:translateX(100%)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:28px;padding:24px 18px 20px}
+.panel[hidden]{display:none}
+.dial{position:relative;width:min(300px,100%);aspect-ratio:1;margin:0 auto 18px}
+.dial svg{width:100%;height:100%;transform:rotate(-90deg)}
+.dial circle{fill:none;stroke-width:10}
+.trk{stroke:var(--track)}
+.bar{stroke:var(--accent);stroke-linecap:round;stroke-dasharray:754;stroke-dashoffset:754;transition:stroke .3s}
+.dial.done .bar{stroke:var(--hot);animation:pulse .6s infinite alternate}
+@keyframes pulse{to{opacity:.35}}
+.dot{position:absolute;inset:0;transition:none}
+.dot::after{content:"";position:absolute;top:1.1%;left:50%;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--hot)}
+.read{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"Chivo Mono",ui-monospace,monospace}
+.time{font-size:clamp(2rem,10vw,2.7rem);font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.time small{font-size:.55em;color:var(--mute);font-weight:300}
+.sub{font:400 .85rem Figtree,sans-serif;color:var(--mute);margin-top:4px}
+.ctrl{display:flex;gap:12px;justify-content:center}
+.btn{flex:1;max-width:150px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:700 1rem Figtree,sans-serif;padding:14px;border-radius:16px;cursor:pointer;transition:transform .1s,background .2s}
+.btn:active{transform:scale(.95)}
+.btn.main{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .btn.main{color:#06222f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.main{color:#06222f}}
+.btn.stop{background:var(--hot);border-color:var(--hot);color:#fff}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:focus-visible,.icon:focus-visible,.tabs button:focus-visible,.chip:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.laps{list-style:none;margin:18px 0 0;padding:0;max-height:210px;overflow-y:auto}
+.laps li{display:grid;grid-template-columns:2.5rem 1fr auto;gap:8px;padding:10px 4px;border-top:1px solid var(--line);font-family:"Chivo Mono",monospace;font-size:.92rem;font-variant-numeric:tabular-nums}
+.laps li:first-child{animation:in .3s}
+@keyframes in{from{background:var(--track)}}
+.laps .n{color:var(--mute)}
+.laps .best{color:var(--ok)}.laps .worst{color:var(--hot)}
+.empty{color:var(--mute);text-align:center;font-size:.9rem;margin-top:16px}
+.setter{display:flex;justify-content:center;gap:8px;align-items:center;margin-bottom:12px}
+.setter label{display:flex;flex-direction:column;align-items:center;font-size:.8rem;color:var(--mute);gap:4px}
+.setter input{width:68px;text-align:center;font:500 1.5rem "Chivo Mono",monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:8px 0}
+.setter span{font-size:1.5rem;color:var(--mute);margin-top:18px}
+.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:7px 14px;border-radius:999px;font:600 .85rem Figtree,sans-serif;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.hint{text-align:center;color:var(--mute);font-size:.8rem;margin-top:14px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+<header><h1>Stopwatch &amp; Timer</h1><button class="icon" id="theme" aria-label="Ganti tema">◐</button></header>
+<div class="tabs" id="tabs" data-i="0" role="tablist"><div class="pill"></div>
+<button role="tab" aria-selected="true" data-t="0">Stopwatch</button>
+<button role="tab" aria-selected="false" data-t="1">Timer</button></div>
+
+<section class="panel" id="p0">
+<div class="dial"><svg viewBox="0 0 260 260"><circle class="trk" cx="130" cy="130" r="120"/><circle class="bar" id="swBar" cx="130" cy="130" r="120"/></svg>
+<div class="dot" id="swDot"></div>
+<div class="read"><div class="time" id="swTime">00:00<small>.00</small></div><div class="sub" id="swSub">Siap Dimulai</div></div></div>
+<div class="ctrl"><button class="btn" id="swLap" disabled>Putaran</button><button class="btn main" id="swGo">Mulai</button><button class="btn" id="swReset" disabled>Reset</button></div>
+<ul class="laps" id="laps"></ul><p class="empty" id="lapEmpty">Tekan Putaran untuk Mencatat Waktu Antar Putaran.</p>
+<p class="hint">Pintasan: Spasi = Mulai/Jeda, L = Putaran, R = Reset</p>
+</section>
+
+<section class="panel" id="p1" hidden>
+<div class="dial" id="tmDial"><svg viewBox="0 0 260 260"><circle class="trk" cx="130" cy="130" r="120"/><circle class="bar" id="tmBar" cx="130" cy="130" r="120"/></svg>
+<div class="read"><div class="time" id="tmTime">05:00</div><div class="sub" id="tmSub">Atur Durasi di Bawah</div></div></div>
+<div class="setter" id="setter"><label>Jam<input id="th" type="number" min="0" max="99" value="0" inputmode="numeric"></label><span>:</span><label>Menit<input id="tm" type="number" min="0" max="59" value="5" inputmode="numeric"></label><span>:</span><label>Detik<input id="ts" type="number" min="0" max="59" value="0" inputmode="numeric"></label></div>
+<div class="chips" id="chips"><button class="chip" data-s="60">1 mnt</button><button class="chip" data-s="300">5 mnt</button><button class="chip" data-s="600">10 mnt</button><button class="chip" data-s="1500">25 mnt</button></div>
+<div class="ctrl"><button class="btn main" id="tmGo">Mulai</button><button class="btn" id="tmReset">Reset</button></div>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id),C=754;
+const pad=n=>String(n).padStart(2,'0');
+function fmt(ms){const t=Math.floor(ms/10),cs=t%100,s=Math.floor(t/100)%60,m=Math.floor(t/6000)%60,h=Math.floor(t/360000);
+return {main:(h?pad(h)+':':'')+pad(m)+':'+pad(s),cs:pad(cs)}}
+const full=ms=>{const f=fmt(ms);return f.main+'.'+f.cs};
+
+/* tema & tab */
+const root=document.documentElement;
+$('theme').onclick=()=>{const dark=matchMedia('(prefers-color-scheme:dark)').matches;const cur=root.dataset.theme||(dark?'dark':'light');root.dataset.theme=cur==='dark'?'light':'dark'};
+function showTab(i){$('tabs').dataset.i=i;document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t==i));$('p0').hidden=i!=0;$('p1').hidden=i!=1}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>showTab(+b.dataset.t));
+
+/* stopwatch */
+let sw={on:false,t0:0,acc:0,raf:0,lapAt:0,laps:[]};
+const swEl=()=>sw.acc+(sw.on?performance.now()-sw.t0:0);
+function swDraw(){const e=swEl(),f=fmt(e),p=(e%60000)/60000;
+$('swTime').innerHTML=f.main+'<small>.'+f.cs+'</small>';
+$('swBar').style.strokeDashoffset=C*(1-p);$('swDot').style.transform='rotate('+p*360+'deg)'}
+function swLoop(){swDraw();if(sw.on)sw.raf=requestAnimationFrame(swLoop)}
+function swToggle(){
+if(sw.on){sw.acc+=performance.now()-sw.t0;sw.on=false;cancelAnimationFrame(sw.raf);$('swGo').textContent='Lanjut';$('swGo').classList.remove('stop');$('swSub').textContent='Dijeda'}
+else{sw.t0=performance.now();sw.on=true;$('swGo').textContent='Jeda';$('swGo').classList.add('stop');$('swSub').textContent='Berjalan';swLoop()}
+$('swLap').disabled=!sw.on;$('swReset').disabled=false}
+function swLap(){if(!sw.on)return;const e=swEl();sw.laps.unshift({n:sw.laps.length+1,split:e-sw.lapAt,total:e});sw.lapAt=e;renderLaps()}
+function renderLaps(){const L=sw.laps;$('lapEmpty').hidden=L.length>0;
+let best=-1,worst=-1;if(L.length>2){const s=L.map(l=>l.split);best=s.indexOf(Math.min(...s));worst=s.indexOf(Math.max(...s))}
+$('laps').innerHTML=L.map((l,i)=>`<li><span class="n">#${l.n}</span><span class="${i===best?'best':i===worst?'worst':''}">+${full(l.split)}</span><span>${full(l.total)}</span></li>`).join('')}
+function swReset(){sw={on:false,t0:0,acc:0,raf:0,lapAt:0,laps:[]};cancelAnimationFrame(sw.raf);$('swGo').textContent='Mulai';$('swGo').classList.remove('stop');$('swSub').textContent='Siap dimulai';$('swLap').disabled=true;$('swReset').disabled=true;renderLaps();swDraw()}
+$('swGo').onclick=swToggle;$('swLap').onclick=swLap;$('swReset').onclick=swReset;
+
+/* timer */
+let tm={on:false,end:0,left:0,total:0,raf:0};
+const inputSec=()=>(+$('th').value||0)*3600+(+$('tm').value||0)*60+(+$('ts').value||0);
+function tmShow(ms){const s=Math.ceil(ms/1000),h=Math.floor(s/3600),m=Math.floor(s/60)%60;
+$('tmTime').textContent=(h?pad(h)+':':'')+pad(m)+':'+pad(s%60)}
+function tmPreview(){if(tm.on||tm.left)return;tm.total=inputSec()*1000;tmShow(tm.total);$('tmBar').style.strokeDashoffset=0}
+['th','tm','ts'].forEach(id=>$(id).oninput=tmPreview);
+$('chips').onclick=e=>{const s=e.target.dataset.s;if(!s||tm.on)return;tmReset();const v=+s;$('th').value=Math.floor(v/3600);$('tm').value=Math.floor(v/60)%60;$('ts').value=v%60;tmPreview()};
+function tmLoop(){const left=tm.end-performance.now();
+if(left<=0){tmDone();return}
+tm.left=left;tmShow(left);$('tmBar').style.strokeDashoffset=C*(1-left/tm.total);tm.raf=requestAnimationFrame(tmLoop)}
+function tmToggle(){
+if($('tmDial').classList.contains('done')){tmReset();return}
+if(tm.on){tm.on=false;cancelAnimationFrame(tm.raf);$('tmGo').textContent='Lanjut';$('tmGo').classList.remove('stop');$('tmSub').textContent='Dijeda';return}
+if(!tm.left){tm.total=inputSec()*1000;tm.left=tm.total}
+if(tm.total<=0){$('tmSub').textContent='Isi durasi lebih dari 0';return}
+tm.end=performance.now()+tm.left;tm.on=true;$('tmGo').textContent='Jeda';$('tmGo').classList.add('stop');$('tmSub').textContent='Menghitung mundur';$('setter').style.opacity=.4;tmLoop()}
+function tmDone(){tm.on=false;tm.left=0;tmShow(0);$('tmBar').style.strokeDashoffset=C;$('tmDial').classList.add('done');$('tmSub').textContent='Waktu habis!';$('tmGo').textContent='Selesai';$('tmGo').classList.remove('stop');beep()}
+function tmReset(){cancelAnimationFrame(tm.raf);tm={on:false,end:0,left:0,total:0,raf:0};$('tmDial').classList.remove('done');$('tmGo').textContent='Mulai';$('tmGo').classList.remove('stop');$('tmSub').textContent='Atur durasi di bawah';$('setter').style.opacity=1;tmPreview()}
+$('tmGo').onclick=tmToggle;$('tmReset').onclick=tmReset;
+function beep(){try{const a=new (window.AudioContext||window.webkitAudioContext)();[0,.3,.6].forEach(d=>{const o=a.createOscillator(),g=a.createGain();o.frequency.value=880;o.connect(g);g.connect(a.destination);g.gain.setValueAtTime(.2,a.currentTime+d);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d+.2);o.start(a.currentTime+d);o.stop(a.currentTime+d+.22)})}catch(e){}}
+
+/* keyboard */
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON')return;const k=e.key.toLowerCase();const t=$('p0').hidden?1:0;
+if(k===' '){e.preventDefault();t?tmToggle():swToggle()}else if(k==='l'&&!t)swLap();else if(k==='r')t?tmReset():swReset()});
+renderLaps();swDraw();tmPreview();
+</script>
+</body>
+</html>
